@@ -3,6 +3,7 @@ import json
 import csv
 import os
 from datetime import datetime
+import ping3
 
 def run_command(command):
     process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -10,6 +11,9 @@ def run_command(command):
     return stdout.decode().strip(), stderr.decode().strip()
 
 while True:
+    # Execute o comando ping para obter a latência
+    latency = ping3.ping('18.231.164.139')
+
     # Execute o comando iperf3
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     log_filename = f"log_{timestamp}.json"
@@ -21,6 +25,17 @@ while True:
     if process.returncode != 0:
         print("Erro ao executar o comando iperf3.")
         continue  # Reiniciar o loop se houver um erro
+
+    # Ler o conteúdo do arquivo JSON gerado pelo iperf3
+    with open(log_filename, 'r') as json_file:
+        iperf_data = json.load(json_file)
+
+    # Adicionar informação de ping ao JSON
+    iperf_data['ping_latency_s'] = latency
+
+    # Salvar o arquivo JSON atualizado
+    with open(log_filename, 'w') as json_file:
+        json.dump(iperf_data, json_file)
 
     # Mover o arquivo JSON resultante para a pasta json-logs
     if not os.path.exists('json-logs'):
@@ -42,7 +57,7 @@ while True:
     git_push_command = 'git push origin main'  # Altere 'main' para o nome da sua branch principal
     run_command(git_push_command)
 
-    print(f"Arquivo JSON movido para json-logs e commit realizado localmente. Push efetuado para o GitHub às {datetime.now()}.")
+    print(f"Arquivo JSON movido para json-logs, commit realizado localmente e push efetuado para o GitHub às {datetime.now()}.")
 
     # Aguardar um intervalo antes de iniciar o próximo loop (por exemplo, a cada 5 minutos)
     import time
